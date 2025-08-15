@@ -31,4 +31,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+        'cryptopanic' => [
+        'key' => env('CRYPTOPANIC_API_KEY'),
+    ],
+        'whalealert' => [
+        'key' => env('WHALE_ALERT_API_KEY'),
+    ],
+
+
 ];
