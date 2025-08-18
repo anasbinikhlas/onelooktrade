@@ -1,8 +1,9 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AlertController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,15 +15,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Keep dashboard as a view/controller for now
+// Dashboard (auth + verified)
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-// Dummy API endpoints (for dashboard) - inside auth group so only logged users can access
+// Auth-only group
 Route::middleware('auth')->group(function () {
 
-    // Dummy JSON endpoints (temporary)
+    // JSON stubs for dashboard panels (replace later with controllers)
     Route::get('/market-data', function () {
         return response()->json([
             'btc' => ['price' => 65430, 'change' => 2.5],
@@ -50,27 +51,21 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('news.data');
 
-    // Placeholder pages so nav links don't 404
-    Route::get('/markets', function () {
-        return view('pages.markets');
-    })->name('markets');
+    // Placeholder pages
+    Route::view('/markets', 'pages.markets')->name('markets');
+    Route::view('/whales', 'pages.whales')->name('whales');
+    Route::view('/news', 'pages.news')->name('news');
 
-    Route::get('/whales', function () {
-        return view('pages.whales');
-    })->name('whales');
+    // Alerts (Controller-backed)
+    Route::get('/alerts', [AlertController::class, 'index'])->name('alerts');
+    Route::post('/alerts', [AlertController::class, 'store'])->name('alerts.store');
+    Route::delete('/alerts/{alert}', [AlertController::class, 'destroy'])->name('alerts.destroy');
 
-    Route::get('/news', function () {
-        return view('pages.news');
-    })->name('news');
-
-    Route::get('/alerts', function () {
-        return view('pages.alerts');
-    })->name('alerts');
-
-    // Breeze profile routes
+    // Breeze profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Breeze auth routes
 require __DIR__.'/auth.php';

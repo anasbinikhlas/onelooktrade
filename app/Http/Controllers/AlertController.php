@@ -33,8 +33,8 @@ class AlertController extends Controller
 
     public function destroy(Alert $alert)
     {
-        $this->authorize('delete', $alert);
+        abort_unless($alert->user_id === Auth::id(), 403);
         $alert->delete();
-        return back();
+        return redirect()->route('alerts')->with('status', 'Alert deleted');
     }
 }
