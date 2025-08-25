@@ -70,7 +70,9 @@
 
                 <div class="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
                     <h3 class="text-lg font-bold mb-4 text-gray-700 dark:text-gray-300">🔔 Alerts</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">No alerts set. Use Alerts page to create notifications.</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        No alerts set. Use the <a class="text-indigo-600 hover:underline" href="{{ route('alerts') }}">Alerts</a> page to create notifications.
+                    </p>
                 </div>
             </div>
 
@@ -84,16 +86,14 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Chart placeholders
         const whaleCtx = document.getElementById('whaleChart').getContext('2d');
         const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
 
-        // Create charts with empty data
         const whaleChart = new Chart(whaleCtx, {
             type: 'line',
             data: { labels: [], datasets: [
-                { label: 'Inflow', data: [], borderColor: 'green', fill: false },
-                { label: 'Outflow', data: [], borderColor: 'red', fill: false }
+                { label: 'Inflow', data: [], borderColor: 'green', fill: false, tension: 0.3 },
+                { label: 'Outflow', data: [], borderColor: 'red', fill: false, tension: 0.3 }
             ]},
             options: { responsive: true, maintainAspectRatio: false }
         });
@@ -104,49 +104,54 @@
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-        // DOM targets
         const btcPriceEl = document.querySelector('.btc-price');
         const ethPriceEl = document.querySelector('.eth-price');
         const whaleTableBody = document.querySelector('#whale-table-body');
         const newsList = document.querySelector('#news-list');
 
-        // Fetch and update market data
         function updateMarket() {
             axios.get('{{ route("market.data") }}')
             .then(res => {
-                const d = res.data;
-                if (d.btc && btcPriceEl) btcPriceEl.textContent = '$' + Number(d.btc.price).toLocaleString();
-                if (d.eth && ethPriceEl) ethPriceEl.textContent = '$' + Number(d.eth.price).toLocaleString();
+                const d = res.data || {};
+                if (d.btc?.price && btcPriceEl) btcPriceEl.textContent = '$' + Number(d.btc.price).toLocaleString();
+                if (d.eth?.price && ethPriceEl) ethPriceEl.textContent = '$' + Number(d.eth.price).toLocaleString();
 
-                // example: build simple whaleChart dataset from top coins change (dummy)
-                const labels = d.top.map(t => t.symbol);
-                const inflowData = d.top.map(t => Math.max(0, Math.round(t.change * 10))); // dummy
-                const outflowData = d.top.map(t => Math.max(0, Math.round(-t.change * 8))); // dummy
+                // quick visualization using top coin changes (placeholder logic)
+                if (Array.isArray(d.top)) {
+                    const labels = d.top.map(t => t.symbol);
+                    const inflowData = d.top.map(t => Math.max(0, Math.round((t.change || 0) * 10)));
+                    const outflowData = d.top.map(t => Math.max(0, Math.round(-(t.change || 0) * 8)));
 
-                whaleChart.data.labels = labels;
-                whaleChart.data.datasets[0].data = inflowData;
-                whaleChart.data.datasets[1].data = outflowData;
-                whaleChart.update();
+                    whaleChart.data.labels = labels;
+                    whaleChart.data.datasets[0].data = inflowData;
+                    whaleChart.data.datasets[1].data = outflowData;
+                    whaleChart.update();
+                }
             })
             .catch(err => console.error('market-data error', err));
         }
 
-        // Fetch and update whale list
         function updateWhales() {
             axios.get('{{ route("whales.data") }}')
             .then(res => {
-                const rows = res.data;
+                const payload = res.data || {};
+                const rows = payload.latest || payload || [];
                 if (!whaleTableBody) return;
                 whaleTableBody.innerHTML = '';
                 rows.forEach(r => {
                     const tr = document.createElement('tr');
                     tr.className = 'border-b dark:border-gray-700';
+                    const amt = (r.amount !== undefined && r.amount !== null)
+                        ? (typeof r.amount === 'number' ? r.amount.toLocaleString() : r.amount)
+                        : '';
                     tr.innerHTML = `
-                        <td class="p-2 font-mono text-xs">${r.wallet}</td>
-                        <td class="p-2">${r.token}</td>
-                        <td class="p-2 ${r.type === 'inflow' ? 'text-green-500' : 'text-red-500'}">${r.type === 'inflow' ? '+' : '-'}${r.amount.toLocaleString ? r.amount.toLocaleString() : r.amount}</td>
-                        <td class="p-2">${r.type}</td>
-                        <td class="p-2 text-xs text-gray-400">${r.time}</td>
+                        <td class="p-2 font-mono text-xs">${r.wallet || ''}</td>
+                        <td class="p-2">${r.token || ''}</td>
+                        <td class="p-2 ${r.type === 'inflow' ? 'text-green-500' : 'text-red-500'}">
+                            ${r.type === 'inflow' ? '+' : (r.type === 'outflow' ? '-' : '')}${amt}
+                        </td>
+                        <td class="p-2">${r.type || ''}</td>
+                        <td class="p-2 text-xs text-gray-400">${r.time || ''}</td>
                     `;
                     whaleTableBody.appendChild(tr);
                 });
@@ -154,30 +159,29 @@
             .catch(err => console.error('whales-data error', err));
         }
 
-        // Fetch and update news
         function updateNews() {
             axios.get('{{ route("news.data") }}')
             .then(res => {
-                const news = res.data;
+                const items = res.data || [];
                 if (!newsList) return;
                 newsList.innerHTML = '';
-                news.forEach(n => {
+                items.forEach(n => {
                     const li = document.createElement('li');
                     li.className = 'border-b py-2';
-                    li.innerHTML = `<a href="${n.url}" target="_blank" class="font-medium">${n.title}</a>
-                                    <br><small class="text-gray-500">${n.source} — ${n.time}</small>`;
+                    const safeUrl = n.url || '#';
+                    li.innerHTML = `<a href="${safeUrl}" target="_blank" rel="noopener" class="font-medium hover:underline">${n.title || ''}</a>
+                                    <br><small class="text-gray-500">${(n.source || 'Unknown')} ${n.time ? '— ' + n.time : ''}</small>`;
                     newsList.appendChild(li);
                 });
             })
             .catch(err => console.error('news-data error', err));
         }
 
-        // Initial update & interval polling
         updateMarket();
         updateWhales();
         updateNews();
 
-        setInterval(updateMarket, 30_000); // update every 30s
+        setInterval(updateMarket, 30_000);
         setInterval(updateWhales, 25_000);
         setInterval(updateNews, 60_000);
     });
