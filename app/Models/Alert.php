@@ -19,11 +19,14 @@ class Alert extends Model
         'last_triggered_at',
     ];
 
-    protected $casts = [
-        'active' => 'boolean',
-        'last_triggered_at' => 'datetime',
-        'threshold' => 'decimal:8',
-    ];
+protected $casts = [
+    'active' => 'boolean',
+    'one_shot' => 'boolean',
+    'target_price' => 'decimal:8',
+    'last_price' => 'decimal:8',
+    'triggered_at' => 'datetime',
+];
+
 
     public function user()
     {

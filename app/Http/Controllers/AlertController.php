@@ -23,8 +23,8 @@ class AlertController extends Controller
             'channel'   => 'nullable|in:email,telegram',
         ]);
 
-        $data['user_id'] = Auth::id();
-        $data['active']  = true;
+        $data['user_id']   = Auth::id();
+        $data['is_active'] = true; // ✅ use is_active instead of active
 
         Alert::create($data);
 

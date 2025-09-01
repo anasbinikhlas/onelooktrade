@@ -6,24 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
         Schema::create('alerts', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // who created it
+            $table->string('symbol'); // e.g. BTC/USDT
+            $table->decimal('target_price', 20, 8); // price threshold
+            $table->enum('condition', ['above', 'below']); // alert condition
+            $table->boolean('is_active')->default(true); // active or paused
+            $table->boolean('is_triggered')->default(false); // already triggered?
+            $table->timestamp('triggered_at')->nullable(); // when it was triggered
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
         Schema::dropIfExists('alerts');
